@@ -95,13 +95,13 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 
 			props << it
 		}
-		props.iterator()
+		props.sort{ it.name }.iterator()
 	}
 
 	String renderId() {
 		def idProperty = getIdentifierProperty()
 		if (c2j.isComponent(idProperty)) {
-			def idDef = new StringBuilder('\t\tid composite: [')
+			def idDef = new StringBuilder('    id composite: [')
 			String delimiter = ''
 			idProperty.value.propertyIterator.each {
 				idDef.append delimiter
@@ -114,7 +114,7 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 		}
 
 		if (idProperty.name != 'id' || idProperty.value.identifierGeneratorStrategy == 'assigned') {
-			def idDef = new StringBuilder('\t\tid ')
+			def idDef = new StringBuilder('    id ')
 			String delimiter = ''
 
 			if (idProperty.name != 'id') {
@@ -145,18 +145,18 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 	String renderVersion() {
 		if (hasVersionProperty()) {
 			if (getVersionProperty().name != 'version') {
-				return '\t\tversion "' + getVersionProperty().value.columnIterator.next().name +
+				return '    version "' + getVersionProperty().value.columnIterator.next().name +
 						'"' + newline
 			}
 			return ''
 		}
 
-		'\t\tversion false' + newline
+		'    version false' + newline
 	}
 
 	String renderTable() {
 //		if (clazz.table.schema || clazz.table.catalog) {
-//			def tableDef = new StringBuilder('\t\ttable ')
+//			def tableDef = new StringBuilder('    table ')
 //			String delimiter = ''
 //
 //			if (clazz.table.schema) {
@@ -243,16 +243,16 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 			return ''
 		}
 
-		def hashCodeDef = new StringBuilder('\tint hashCode() {')
+		def hashCodeDef = new StringBuilder('  int hashCode() {')
 		hashCodeDef.append newline
-		hashCodeDef.append '\t\tdef builder = new HashCodeBuilder()'
+		hashCodeDef.append '    def builder = new HashCodeBuilder()'
 		hashCodeDef.append newline
 
-		def equalsDef = new StringBuilder('\tboolean equals(other) {')
+		def equalsDef = new StringBuilder('  boolean equals(other) {')
 		equalsDef.append newline
-		equalsDef.append '\t\tif (other == null) return false'
+		equalsDef.append '    if (other == null) return false'
 		equalsDef.append newline
-		equalsDef.append '\t\tdef builder = new EqualsBuilder()'
+		equalsDef.append '    def builder = new EqualsBuilder()'
 		equalsDef.append newline
 
 		getAllPropertiesIterator().each { property ->
@@ -261,11 +261,11 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 				if (name != property.name) {
 					name += '?.id'
 				}
-				hashCodeDef.append '\t\tbuilder.append '
+				hashCodeDef.append '    builder.append '
 				hashCodeDef.append name
 				hashCodeDef.append newline
 
-				equalsDef.append '\t\tbuilder.append '
+				equalsDef.append '    builder.append '
 				equalsDef.append name
 				equalsDef.append ', other.'
 				equalsDef.append name
@@ -273,14 +273,14 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 			}
 		}
 
-		hashCodeDef.append '\t\tbuilder.toHashCode()'
+		hashCodeDef.append '    builder.toHashCode()'
 		hashCodeDef.append newline
-		hashCodeDef.append '\t}'
+		hashCodeDef.append '  }'
 		hashCodeDef.append newline
 
-		equalsDef.append '\t\tbuilder.isEquals()'
+		equalsDef.append '    builder.isEquals()'
 		equalsDef.append newline
-		equalsDef.append '\t}'
+		equalsDef.append '  }'
 
 		newline + hashCodeDef + newline + equalsDef
 	}
@@ -320,7 +320,7 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 			}
 
 			if (values) {
-				constraints.append "\t\t$property.name "
+				constraints.append "    $property.name "
 				String delimiter = ''
 				values.each { k, v ->
 					constraints.append delimiter
@@ -331,7 +331,7 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 			}
 		}
 
-		constraints.length() ? "\tstatic constraints = {$newline$constraints\t}" : ''
+		constraints.length() ? "  static constraints = {$newline$constraints  }" : ''
 	}
 
 	void findNewProperties() {
@@ -348,6 +348,7 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 				newProperties << it
 			}
 		}
+		newProperties = newProperties.sort { it.name }
 	}
 
 	String renderMany() {
@@ -363,6 +364,7 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 				many.append newline
 			}
 			if (belongs) {
+				many.append newline
 				many.append combine('static belongsTo = [', ', ', ']', belongs)
 				many.append newline
 			}
@@ -408,8 +410,8 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 			return ''
 		}
 
-		"\t// TODO you have multiple hasMany references for class(es) $classNames " + newline +
-		"\t//      so you'll need to disambiguate them with the 'mappedBy' property:" + newline +
+		"  // TODO you have multiple hasMany references for class(es) $classNames " + newline +
+		"  //      so you'll need to disambiguate them with the 'mappedBy' property:" + newline +
 		combine('static mappedBy = [', ', ', ']', mappedBy, true) + newline
 	}
 
@@ -484,10 +486,15 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 
 	String renderProperties() {
 		def props = new StringBuilder()
-		getAllPropertiesIterator().each { prop ->
+
+		def propIt = getAllPropertiesIterator()
+		if (propIt.hasNext()) {
+			props.append '  // field(s)' + newline
+		}
+		propIt.each { prop ->
 			if (getMetaAttribAsBool(prop, 'gen-property', true)) {
 				if (findRealIdName(prop) == prop.name) {
-					props.append '\t'
+					props.append '  '
 					props.append getJavaTypeName(prop, true)
 					props.append ' '
 					props.append prop.name
@@ -496,14 +503,16 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 			}
 		}
 
+		if (newProperties.size() > 0) {
+			props.append '  // relation(s)' + newline
+		}
 		for (prop in newProperties) {
-			props.append '\t'
+			props.append '  '
 			props.append classShortName(prop.value.referencedEntityName)
 			props.append ' '
 			props.append prop.name
 			props.append newline
 		}
-
 		props.toString()
 	}
 
@@ -512,7 +521,7 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 		mapping.append renderId()
 		mapping.append renderVersion()
 		mapping.append renderTable()
-		mapping.length() ? "\tstatic mapping = {$newline$mapping\t}" : ''
+		mapping.length() ? "  static mapping = {$newline$mapping  }" : ''
 	}
 
 	String renderClassStart() {
@@ -546,13 +555,13 @@ class GrailsEntityPOJOClass extends EntityPOJOClass {
 	}
 
 	private String combine(String start, String delim, String end, things, boolean lineUp = false) {
-		def buffer = new StringBuilder('\t')
-		
+		def buffer = new StringBuilder('  ')
+
 		String pad
 		if (lineUp) {
 			def bufferPad = new StringBuilder()
 			bufferPad.append newline
-			bufferPad.append '\t'
+			bufferPad.append '  '
 			start.length().times { bufferPad.append ' ' }
 			pad = bufferPad.toString()
 		}
